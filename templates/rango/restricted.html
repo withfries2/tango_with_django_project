@@ -1,0 +1,13 @@
+{% extends 'rango/base.html' %}
+
+{% block title %}Restricted Page{% endblock %}
+
+{% block body_block %}
+    <h1>Restricted Page</h1>
+
+    {% if user.is_authenticated %}
+       <strong>Congratulations, logged in users can see this text.</strong> 
+    {% endif %}
+
+    {% csrf_token %}
+{% endblock %}

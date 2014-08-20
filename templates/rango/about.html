@@ -1,0 +1,10 @@
+{% extends 'rango/base.html' %}
+
+{% block title %}About Page{% endblock %}
+
+{% block body_block %}
+    <h1>About Page</h1>
+    Rango says here is the about page. <a href='/rango/'>Index</a>
+
+    {% csrf_token %}
+{% endblock %}
