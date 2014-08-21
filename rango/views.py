@@ -7,7 +7,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django import forms
 from django.http import HttpResponseRedirect, HttpResponse
-
+from datetime import datetime
+from django.contrib.sessions.models import Session
 
 from rango.models import Category
 from rango.models import Page
@@ -16,22 +17,32 @@ from rango.forms import PageForm
 from rango.models import UserProfile
 
 
+def encode_url(category_name):
+	category_name = category_name.replace("_", " ")
+	return category_name
+
+def decode_url(category_name_url):
+	category_name_url = category_name_url.replace(" ", "_")
+	return category_name_url
 
 def index(request):
-    # Obtain the context from the HTTP request.
     context = RequestContext(request)
 
-    # Query for categories - add the list to our context dictionary.
-    category_list = Category.objects.order_by('-likes')
+    category_list = Category.objects.all()
     context_dict = {'categories': category_list}
 
-    # The following two lines are new.
-    # We loop through each category returned, and create a URL attribute.
-    # This attribute stores an encoded URL (e.g. spaces replaced with underscores).
     for category in category_list:
-        category.url = category.name.replace(" ", "_")
+        category.url = encode_url(category.name)
 
-    # Render the response and return to the client.
+    page_list = Page.objects.order_by('-views')
+    context_dict['pages'] = page_list
+
+    if request.session.get('visits'):
+        request.session['visits'] += 1
+    else:
+        request.session['visits'] = 1
+    
+    # Render and return the rendered response back to the user.
     return render_to_response('rango/index.html', context_dict, context)
 
 def category(request, category_name_url):
@@ -72,7 +83,14 @@ def category(request, category_name_url):
 
 def about(request):
 	context = RequestContext(request)
-	return render_to_response('rango/about.html', context)
+
+	if request.session.get('visits'):
+		numVisits = request.session.get('visits')
+	else:
+		numVisits = 0
+
+	return render_to_response('rango/about.html', {'visits': numVisits}, context)
+	
 	
 @login_required
 def add_category(request):
@@ -101,10 +119,6 @@ def add_category(request):
     # Bad form (or form details), no form supplied...
     # Render the form with error messages (if any).
     return render_to_response('rango/add_category.html', {'form': form}, context)
-
-def decode_url(category_name_url):
-	category_name_url = category_name_url.replace(" ", "_")
-	return category_name_url
 
 @login_required
 def add_page(request, category_name_url):
@@ -153,6 +167,10 @@ from rango.forms import UserForm, UserProfileForm
 def register(request):
     # Like before, get the request's context.
     context = RequestContext(request)
+
+    if request.session.test_cookie_worked():
+    	print ">>>> TEST COOKIE WORKED!"
+    	request.session.delete_test_cookie()
 
     # A boolean value for telling the template whether the registration was successful.
     # Set to False initially. Code changes value to True when registration succeeds.
